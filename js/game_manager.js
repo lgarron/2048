@@ -1,3 +1,6 @@
+
+var stems = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+
 function GameManager(size, InputManager, Actuator, ScoreManager) {
   this.size         = size; // Size of the grid
   this.inputManager = new InputManager;
@@ -11,6 +14,7 @@ function GameManager(size, InputManager, Actuator, ScoreManager) {
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
 
   this.setup();
+  updateAudio();
 }
 
 // Restart the game
@@ -47,6 +51,19 @@ GameManager.prototype.setup = function () {
 
   // Update the actuator
   this.actuate();
+
+  for (var i in stems) {
+    var s = document.getElementById("stem-" + stems[i]);
+    try {
+      s.currentTime = 0;
+      s.volume = 0;
+      s.play();
+    }
+    catch (e) {
+
+    }
+  }
+  this.aimAudio(this.grid);
 };
 
 // Set up the initial tiles to start the game with
@@ -161,7 +178,49 @@ GameManager.prototype.move = function (direction) {
 
     this.actuate();
   }
+
+  this.aimAudio(self.grid);
 };
+
+var updateAudio = function() {
+  for (var i in stems) {
+    var s = document.getElementById("stem-" + stems[i]);
+    if (s.volume < s.targetVolume) {
+      s.volume = Math.min(s.volume + 0.01, s.targetVolume);
+    }
+    if (s.volume > s.targetVolume) {
+      s.volume = Math.max(s.volume - 0.001, s.targetVolume);
+    }
+  }
+  setTimeout(updateAudio, 50);
+}
+
+GameManager.prototype.aimAudio = function(grid) {
+  var x = {};
+  for (i in stems) {
+    x[stems[i]] = 0;
+  }
+
+  for (var i in grid.cells) {
+    for (var j in grid.cells[i]) {
+      if (grid.cells[i][j]) {
+        var k = 1;
+        for (v = grid.cells[i][j].value; v >= 2; v = v/2) {
+          x[v] += k;
+          k *= 1.5;
+        }
+      }
+    }
+  }
+
+  var pos = document.getElementById("stem-2").currentPosition;
+  for (var i in x) {
+    document.getElementById("stem-" + i).targetVolume = Math.min(1, x[i]/64);
+    document.getElementById("stem-" + i).currentPosition = pos;
+    document.getElementById("stem-" + i).play();
+  }
+  // console.log(x);
+}
 
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
